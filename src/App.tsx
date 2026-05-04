@@ -140,11 +140,51 @@ export default function App() {
     notes: "",
   });
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({
+    subject: "",
+    date: "",
+    time: "",
+    room: "",
+    notes: "",
+  });
+
   useEffect(() => {
     setLoaded(true);
     const ticker = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(ticker);
   }, []);
+
+  const startEdit = (exam: Exam) => {
+    setEditingId(exam.id);
+    setEditForm({
+      subject: exam.subject,
+      date: exam.date,
+      time: exam.time,
+      room: exam.room,
+      notes: exam.notes || "",
+    });
+  };
+
+  const saveEdit = () => {
+    if (!editingId || !editForm.subject || !editForm.date || !editForm.time || !editForm.room) return;
+    setExams((prev) =>
+      prev.map((e) =>
+        e.id === editingId
+          ? { ...e, subject: editForm.subject, date: editForm.date, day: getDayName(editForm.date), time: editForm.time, room: editForm.room, notes: editForm.notes || undefined }
+          : e
+      )
+    );
+    setEditingId(null);
+    setEditForm({ subject: "", date: "", time: "", room: "", notes: "" });
+    setFlying(true);
+    setTimeout(() => setFlying(false), 600);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ subject: "", date: "", time: "", room: "", notes: "" });
+  };
 
   const addExam = () => {
     if (!form.subject || !form.date || !form.time || !form.room) return;
@@ -457,9 +497,9 @@ export default function App() {
                       <Th className="hidden lg:table-cell py-4.5 px-5">Day</Th>
                       <Th className="py-4.5 px-5">Time</Th>
                       <Th className="py-4.5 px-5">Room</Th>
-                      <Th className="hidden lg:table-cell py-4.5 px-5">Notes</Th>
-                      <Th className="w-12 py-4.5 px-3"></Th>
-                    </tr>
+                    <Th className="hidden lg:table-cell py-4.5 px-5">Notes</Th>
+                    <Th className="w-28 py-4.5 px-3 text-right">Actions</Th>
+                  </tr>
                   </thead>
                   <tbody>
                     {filtered.map((exam, i) => (
@@ -496,19 +536,30 @@ export default function App() {
                           </span>
                         </td>
                         <td className="px-5 py-5 font-bold text-slate-800">{exam.room}</td>
-                        <td className="hidden max-w-[180px] truncate px-5 py-5 font-bold text-slate-700 lg:table-cell">
+                        <td className="hidden max-w-[180px] truncate px-5 py-5 font-bold text-slate-700 lg:table-cell lg:text-right">
                           {exam.notes || "—"}
                         </td>
-                        <td className="px-3 py-5">
-                          <button
-                            onClick={() => removeExam(exam.id)}
-                            className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-slate-500 border border-slate-200 transition-all duration-300 hover:bg-red-50 hover:text-red-600 hover:border-red-300 hover:scale-105 active:scale-95 shadow-md"
-                            title="Remove"
-                          >
-                            <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
+                        <td className="px-3 py-5 text-right">
+                          <div className="flex gap-2 justify-end">
+                            <button
+                              onClick={() => startEdit(exam)}
+                              className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-300/50 transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95"
+                              title="Edit"
+                            >
+                              <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                            </button>
+                            <button
+                              onClick={() => removeExam(exam.id)}
+                              className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-300/50 transition-all duration-300 hover:scale-105 hover:shadow-xl active:scale-95"
+                              title="Remove"
+                            >
+                              <svg className="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -517,8 +568,123 @@ export default function App() {
               </div>
             </div>
 
+            {/* 💻 Desktop/Tablet Edit Form */}
+            {editingId && (
+              <div className="hidden md:block animate-fadeInUp glass-card p-6 rounded-2xl border-2 border-blue-300/60 mb-6">
+                <h3 className="mb-4 text-lg font-extrabold text-slate-900">Edit Exam</h3>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+                  <input
+                    type="text"
+                    placeholder="Subject *"
+                    value={editForm.subject}
+                    onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
+                    className="glass-input rounded-xl border-2 px-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-500"
+                  />
+                  <input
+                    type="date"
+                    value={editForm.date}
+                    onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                    className="glass-input rounded-xl border-2 px-4 py-3 text-sm font-bold text-slate-800"
+                  />
+                  <input
+                    type="text"
+                    placeholder='Time e.g. "1:45 PM - 3" *'
+                    value={editForm.time}
+                    onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
+                    className="glass-input rounded-xl border-2 px-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-500"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Room *"
+                    value={editForm.room}
+                    onChange={(e) => setEditForm({ ...editForm, room: e.target.value })}
+                    className="glass-input rounded-xl border-2 px-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-500"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      onClick={saveEdit}
+                      disabled={!editForm.subject || !editForm.date || !editForm.time || !editForm.room}
+                      className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-3 text-sm font-bold text-white shadow-xl shadow-emerald-400/50 transition-all duration-300 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={cancelEdit}
+                      className="flex-1 rounded-xl bg-gradient-to-r from-slate-400 to-slate-500 px-5 py-3 text-sm font-bold text-white shadow-xl shadow-slate-300/50 transition-all duration-300 hover:scale-105 active:scale-95"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Notes (optional)"
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                  className="glass-input mt-4 w-full rounded-xl border-2 px-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-500"
+                />
+              </div>
+            )}
+
             {/* 📱 Mobile Layout: Dynamic List Card View (Full responsiveness even on small DPI) */}
             <div className="md:hidden space-y-4">
+              {/* Edit Form - Mobile */}
+              {editingId && (
+                <div className="animate-fadeInUp glass-card p-5 rounded-2xl border-2 border-blue-300/60">
+                  <h3 className="mb-4 text-lg font-extrabold text-slate-900">Edit Exam</h3>
+                  <div className="space-y-3">
+                    <input
+                      type="text"
+                      placeholder="Subject *"
+                      value={editForm.subject}
+                      onChange={(e) => setEditForm({ ...editForm, subject: e.target.value })}
+                      className="glass-input w-full rounded-xl border-2 px-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-500"
+                    />
+                    <input
+                      type="date"
+                      value={editForm.date}
+                      onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                      className="glass-input w-full rounded-xl border-2 px-4 py-3 text-sm font-bold text-slate-800"
+                    />
+                    <input
+                      type="text"
+                      placeholder='Time e.g. "1:45 PM - 3" *'
+                      value={editForm.time}
+                      onChange={(e) => setEditForm({ ...editForm, time: e.target.value })}
+                      className="glass-input w-full rounded-xl border-2 px-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Room *"
+                      value={editForm.room}
+                      onChange={(e) => setEditForm({ ...editForm, room: e.target.value })}
+                      className="glass-input w-full rounded-xl border-2 px-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-500"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Notes (optional)"
+                      value={editForm.notes}
+                      onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
+                      className="glass-input w-full rounded-xl border-2 px-4 py-3 text-sm font-bold text-slate-800 placeholder:text-slate-500"
+                    />
+                    <div className="flex gap-3 pt-2">
+                      <button
+                        onClick={saveEdit}
+                        disabled={!editForm.subject || !editForm.date || !editForm.time || !editForm.room}
+                        className="flex-1 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-5 py-3 text-sm font-bold text-white shadow-xl shadow-emerald-400/50 transition-all duration-300 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
+                      >
+                        Save Changes
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="flex-1 rounded-xl bg-gradient-to-r from-slate-400 to-slate-500 px-5 py-3 text-sm font-bold text-white shadow-xl shadow-slate-300/50 transition-all duration-300 hover:scale-105 active:scale-95"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               {filtered.map((exam, i) => (
                 <div
                   key={exam.id}
@@ -527,14 +693,14 @@ export default function App() {
                   }`}
                   style={{ animationDelay: `${i * 0.05}s` }}
                 >
-                  {/* Top Row: Subject + Delete button */}
+                  {/* Top Row: Subject + Remove button */}
                   <div className="flex items-center justify-between gap-3">
                     <span className="inline-block rounded-xl bg-gradient-to-r from-pink-100 to-purple-100 px-3.5 py-1.5 text-sm font-extrabold text-purple-800 ring-2 ring-purple-300/80">
                       {exam.subject}
                     </span>
                     <button
                       onClick={() => removeExam(exam.id)}
-                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-white text-slate-400 border border-slate-200 transition-all duration-300 hover:bg-red-50 hover:text-red-600 hover:border-red-300 active:scale-90 shadow-sm"
+                      className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white shadow-lg shadow-red-300/50 transition-all duration-300 hover:scale-105 active:scale-90"
                     >
                       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
@@ -571,14 +737,25 @@ export default function App() {
                       </div>
                     </div>
 
-                    {exam.notes && (
-                      <div className="col-span-2 pt-1">
-                        <span className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Notes</span>
-                        <p className="mt-0.5 font-bold text-slate-700 text-sm bg-white/40 p-2.5 rounded-xl border border-white/50">
-                          {exam.notes}
-                        </p>
+                    {/* Notes + Action Buttons row */}
+                    <div className="col-span-2 pt-1">
+                      <div className="flex items-end justify-between gap-3 bg-white/40 p-2.5 rounded-xl border border-white/50">
+                        <div className="min-w-0 flex-1">
+                          <span className="block text-xs font-bold text-slate-500 uppercase tracking-wide">Notes</span>
+                          <p className="mt-0.5 font-bold text-slate-700 text-sm truncate">
+                            {exam.notes || "—"}
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => startEdit(exam)}
+                          className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-300/50 transition-all duration-300 hover:scale-105 active:scale-90"
+                        >
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
                       </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               ))}
